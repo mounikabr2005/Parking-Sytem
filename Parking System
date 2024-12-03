@@ -1,0 +1,289 @@
+package parking;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.Date;
+
+// Main application class
+public class ParkingManagementApp {
+    private JFrame frame;
+    private JTextArea parkingStatusArea;
+    private JButton reserveButton;
+    private JComboBox<String> timeSlotComboBox; // ComboBox for time slots
+    private ArrayList<ParkingSpace> parkingSpaces;
+    private JSpinner dateSpinner; // Spinner for date selection
+    private JButton carButton; // Button to show car spaces
+    private JButton bikeButton; // Button to show bike spaces
+    private String currentVehicleType; // To track the currently selected vehicle type
+
+    // Hardcoded credentials for demonstration
+    private final String USERNAME = "admin";
+    private final String PASSWORD = "1234";
+
+    public ParkingManagementApp() {
+        // Show login dialog first
+        if (!showLoginDialog()) {
+            System.exit(0); // Exit if login fails
+        }
+
+        parkingSpaces = new ArrayList<>();
+        double defaultPrice = 10.0; // Set a default price for parking spaces
+
+        // Initialize parking spaces for cars and bikes
+        for (int i = 0; i < 5; i++) {
+            parkingSpaces.add(new CarParkingSpace("Car Space " + (i + 1), defaultPrice));
+            parkingSpaces.add(new BikeParkingSpace("Bike Space " + (i + 1), defaultPrice));
+        }
+
+        frame = new JFrame("Parking Management System");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(600, 600);
+        frame.setLayout(new BorderLayout());
+        frame.getContentPane().setBackground(new Color(240, 240, 240)); // Light gray background
+
+        // Create and set up the title label
+        JLabel titleLabel = new JLabel("Parking System", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24)); // Set font size and style
+        titleLabel.setForeground(Color.BLUE); // Set text color
+        frame.add(titleLabel, BorderLayout.NORTH); // Add title to the top of the frame
+
+        parkingStatusArea = new JTextArea();
+        parkingStatusArea.setEditable(false);
+        parkingStatusArea.setFont(new Font("Arial", Font.PLAIN, 16)); // Increased font size
+        parkingStatusArea.setBackground(new Color(255, 255, 255)); // White background for text area
+        parkingStatusArea.setForeground(new Color(0, 0, 0)); // Black text
+        parkingStatusArea.setLineWrap(true);
+        parkingStatusArea.setWrapStyleWord(true);
+
+        JPanel controlPanel = new JPanel();
+        controlPanel.setLayout(new GridLayout(0, 1, 10, 10)); // Vertical layout with spacing
+        controlPanel.setBackground(new Color(240, 240, 240)); // Match background color
+
+        reserveButton = new JButton("Reserve");
+        reserveButton.setFont(new Font("Arial", Font.BOLD, 18)); // Increased font size
+        reserveButton.setBackground(new Color(100, 150, 250)); // Blue
+        reserveButton.setForeground(Color.WHITE);
+        reserveButton.setFocusPainted(false);
+        reserveButton.setBorder(BorderFactory.createLineBorder(Color.BLUE, 2));
+
+        // ComboBox for time slots
+        String[] timeSlots = {"08:00 AM - 10:00 AM", "10:00 AM - 12:00 PM", "12:00 PM - 02:00 PM", "02:00 PM - 04:00 PM", "04:00 PM - 06:00 PM"};
+        timeSlotComboBox = new JComboBox<>(timeSlots);
+        timeSlotComboBox.setFont(new Font("Arial", Font.PLAIN, 16)); // Increased font size
+        timeSlotComboBox.setBackground(new Color(230, 230, 255)); // Light blue background
+
+        timeSlotComboBox.setBackground(new Color(230, 230, 255)); // Light blue background
+        timeSlotComboBox.setForeground(Color.BLACK);
+
+        // Spinner for date selection
+        SpinnerDateModel model = new SpinnerDateModel();
+        dateSpinner = new JSpinner(model);
+        JSpinner.DateEditor editor = new JSpinner.DateEditor(dateSpinner, "yyyy-MM-dd");
+        dateSpinner.setEditor(editor);
+        model.setValue(new Date()); // Set current date
+        dateSpinner.setFont(new Font("Arial", Font.PLAIN, 16)); // Increased font size
+        dateSpinner.setBackground(new Color(230, 230, 255)); // Light blue background
+
+        // Create buttons for selecting vehicle types
+        carButton = new JButton("Show Car Spaces");
+        bikeButton = new JButton("Show Bike Spaces");
+
+        // Set button styles
+        carButton.setFont(new Font("Arial", Font.BOLD, 18)); // Increased font size
+        bikeButton.setFont(new Font("Arial", Font.BOLD, 18)); // Increased font size
+        carButton.setBackground(new Color(100, 200, 100)); // Green
+        bikeButton.setBackground(new Color(200, 100, 100)); // Red
+        carButton.setForeground(Color.WHITE);
+        bikeButton.setForeground(Color.WHITE);
+        carButton.setFocusPainted(false);
+        bikeButton.setFocusPainted(false);
+        carButton.setBorder(BorderFactory.createLineBorder(Color.GREEN, 2));
+        bikeButton.setBorder(BorderFactory.createLineBorder(Color.RED, 2));
+
+        // Add action listeners for the vehicle type buttons
+        carButton.addActionListener(e -> showAvailableSpaces("Car"));
+        bikeButton.addActionListener(e -> showAvailableSpaces("Bike"));
+
+        // Add components to control panel
+        controlPanel.add(carButton);
+        controlPanel.add(bikeButton);
+        controlPanel.add(new JLabel("Select Date:"));
+        controlPanel.add(dateSpinner);
+        controlPanel.add(new JLabel("Select Time Slot:"));
+        controlPanel.add(timeSlotComboBox);
+        controlPanel.add(reserveButton);
+
+        frame.add(new JScrollPane(parkingStatusArea), BorderLayout.CENTER);
+        frame.add(controlPanel, BorderLayout.SOUTH);
+
+        reserveButton.addActionListener(new ReserveAction());
+
+        frame.setVisible(true);
+    }
+
+    private boolean showLoginDialog() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS)); // Set layout to vertical
+
+        JLabel titleLabel = new JLabel("Parking System");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 20)); // Set font for title
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT); // Center the title
+
+        JTextField usernameField = new JTextField(15);
+        JPasswordField passwordField = new JPasswordField(15);
+        
+        panel.add(titleLabel); // Add title to the panel
+        panel.add(Box.createRigidArea(new Dimension(0, 10))); // Add some space
+        panel.add(new JLabel("Username:"));
+        panel.add(usernameField);
+        panel.add(new JLabel("Password:"));
+        panel.add(passwordField);
+
+        int option = JOptionPane.showConfirmDialog(null, panel, "Login", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (option == JOptionPane.OK_OPTION) {
+            String username = usernameField.getText();
+            String password = new String(passwordField.getPassword());
+            return username.equals(USERNAME) && password.equals(PASSWORD);
+        }
+        return false; // Login cancelled
+    }
+
+    private void showAvailableSpaces(String vehicleType) {
+        currentVehicleType = vehicleType;
+        StringBuilder status = new StringBuilder(); // Start with an empty string
+        status.append("Available ").append(vehicleType).append(" Parking Spaces:\n");
+        for (ParkingSpace space : parkingSpaces) {
+            if (!space.isOccupied() && space.getType().equals(vehicleType)) {
+                status.append(space).append("\n");
+            }
+        }
+        parkingStatusArea.setText(status.toString());
+    }
+
+    private class ReserveAction implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            String selectedTimeSlot = (String) timeSlotComboBox.getSelectedItem();
+            Date selectedDate = (Date) dateSpinner.getValue();
+            String dateString = new java.text.SimpleDateFormat("yyyy-MM-dd").format(selectedDate);
+
+            // Create a list of available spaces for selection
+            ArrayList<ParkingSpace> availableSpaces = new ArrayList<>();
+            for (ParkingSpace space : parkingSpaces) {
+                if (!space.isOccupied() && space.getType().equals(currentVehicleType)) {
+                    availableSpaces.add(space);
+                }
+            }
+
+            if (availableSpaces.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "No available parking spaces for " + currentVehicleType + "!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Create a dialog to select a specific space
+            String[] spaceOptions = availableSpaces.stream().map(ParkingSpace::getName).toArray(String[]::new);
+            String selectedSpaceName = (String) JOptionPane.showInputDialog(frame, "Select a parking space:", "Select Space", JOptionPane.QUESTION_MESSAGE, null, spaceOptions, spaceOptions[0]);
+
+            if (selectedSpaceName != null) {
+                // Prompt for user name and DOB
+                String userName = JOptionPane.showInputDialog(frame, "Enter your name:", "User   Information", JOptionPane.QUESTION_MESSAGE);
+                String dob = JOptionPane.showInputDialog(frame, "Enter your date of birth (YYYY-MM-DD):", "User   Information", JOptionPane.QUESTION_MESSAGE);
+
+                if (userName != null && dob != null) {
+                    for (ParkingSpace space : availableSpaces) {
+                        if (space.getName().equals(selectedSpaceName)) {
+                            space.reserve(selectedTimeSlot, dateString);
+                            String report = generateReport(userName, dob, space.getName(), currentVehicleType, dateString, selectedTimeSlot);
+                            JOptionPane.showMessageDialog(frame, report, "Reservation Confirmed", JOptionPane.INFORMATION_MESSAGE);
+                            showAvailableSpaces(currentVehicleType); // Refresh the available spaces
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        private String generateReport(String userName, String dob, String spaceBooked, String vehicleName, String bookedDate, String time) {
+            return "Reservation Report:\n" +
+                   "Name: " + userName + "\n" +
+                   "Date of Birth: " + dob + "\n" +
+                   "Space Booked: " + spaceBooked + "\n" +
+                   "Vehicle Type: " + vehicleName + "\n" +
+                   "Booked Date: " + bookedDate + "\n" +
+                   "Time Slot: " + time;
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(ParkingManagementApp::new);
+    }
+}
+
+// Base ParkingSpace class
+abstract class ParkingSpace {
+    protected String name;
+    protected double price;
+    protected boolean occupied;
+    protected String reservationTime;
+    protected String reservationDate;
+
+    public ParkingSpace(String name, double price) {
+        this.name = name;
+        this.price = price;
+        this.occupied = false;
+        this.reservationTime = "";
+        this.reservationDate = "";
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public boolean isOccupied() {
+        return occupied;
+    }
+
+    public abstract String getType();
+
+    public void reserve(String time, String date) {
+        this.occupied = true;
+        this.reservationTime = time;
+        this.reservationDate = date;
+    }
+
+    @Override
+    public String toString() {
+        return name + " - " + (occupied ? "Occupied (Reserved for " + reservationDate + " " + reservationTime + ")" : "Available") + " - Price: $" + price;
+    }
+}
+
+// CarParkingSpace class
+class CarParkingSpace extends ParkingSpace {
+    public CarParkingSpace(String name, double price) {
+        super(name, price);
+    }
+
+    @Override
+    public String getType() {
+        return "Car";
+    }
+}
+
+// BikeParkingSpace class
+class BikeParkingSpace extends ParkingSpace {
+    public BikeParkingSpace(String name, double price) {
+        super(name, price);
+    }
+
+    @Override
+    public String getType() {
+        return "Bike";
+    }
+}
